@@ -1,0 +1,12 @@
+{
+    "spellright.language": [
+        "English (American)"
+    ],
+    "spellright.documentTypes": [
+        "markdown",
+        "latex",
+        "plaintext",
+        "java"
+    ],
+    "java.configuration.updateBuildConfiguration": "interactive"
+}

@@ -1,0 +1,8 @@
+main: io.github.tux2603.manhunt.App
+name: manhunt
+version: 0.1
+commands:
+  start:
+    description: starts the game
+    usage: /<command>
+    permission: manhunt.admin

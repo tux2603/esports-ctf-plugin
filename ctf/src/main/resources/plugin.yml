@@ -1,0 +1,37 @@
+main: io.github.tux2603.ctf.App
+name: ctf
+version: 0.1
+description: Simple Capture the Flag plugin with multiple player classes
+api-version: 1.17
+commands:
+  setRedBase:
+    description: Sets the location of the red team's base. If no location is specified, the player's location is used
+    usage: setRedBase [location]
+    permission: ctf.admin
+  setBlueBase:
+    description: Sets the location of the blue team's base. If no location is specified, the player's location is used
+    usage: setBlueBase [location]
+    permission: ctf.admin
+  startGame:
+    description: Starts the game
+    usage: startGame
+    permission: ctf.admin
+  stopGame:
+    description: Stops the game
+    usage: stopGame
+    permission: ctf.admin
+  restartGame:
+    description: Restarts the game
+    usage: restartGame
+    permission: ctf.admin
+  class:
+    description: Sets the class of the player
+    usage: class <class>
+    permission: ctf.player
+permission:
+  ctf.admin:
+    description: Allows the player to use admin commands
+    default: op
+  ctf.player:
+    description: Allows the player to use player commands
+    default: true

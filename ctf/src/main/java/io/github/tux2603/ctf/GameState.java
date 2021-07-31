@@ -1,25 +1,18 @@
 package io.github.tux2603.ctf;
 
-import java.util.ArrayList;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.Color;
-import org.bukkit.FireworkEffect;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.inventory.meta.FireworkMeta;
-import org.bukkit.inventory.meta.LeatherArmorMeta;
-import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.Score;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
+
+// TODO: This file is a bit long, maybe split it up?
 
 public class GameState {
 
@@ -36,11 +29,23 @@ public class GameState {
 
     private Objective flagsCaptured;
     private Objective flagsRecovered;
-    private Objective playerHasClass;
+    private Objective playerClasses;
+
+    private FlagStateTick flagTick;
 
     private JavaPlugin plugin;
 
-    private boolean running;
+    private boolean running = false;
+    private boolean isRedBaseLocationSet = false;
+    private boolean isBlueBaseLocationSet = false;
+
+    private Player redFlagHolder = null;
+    private Player blueFlagHolder = null;
+
+    private boolean isRedFlagStolen = false;
+    private boolean isBlueFlagStolen = false;
+    private boolean isRedFlagAtBase = true;
+    private boolean isBlueFlagAtBase = true;
 
 
     /**
@@ -96,10 +101,15 @@ public class GameState {
             flagsRecovered = scoreboard.registerNewObjective("flagsRecovered", "dummy", "Flags Recovered");
         }
 
-        playerHasClass = scoreboard.getObjective("playerHasClass");
-        if (playerHasClass == null) {
-            playerHasClass = scoreboard.registerNewObjective("playerHasClass", "dummy", "Player Class is Set");
+        playerClasses = scoreboard.getObjective("playerHasClass");
+        if (playerClasses == null) {
+            playerClasses = scoreboard.registerNewObjective("playerHasClass", "dummy", "Player Class is Set");
         }
+
+        // ##### Set up the listeners #####
+
+        plugin.getServer().getPluginManager().registerEvents(new PlayerRespawnListener(this), plugin);
+        plugin.getServer().getPluginManager().registerEvents(new PlayerDeathListener(this), plugin);
     }
 
 
@@ -117,7 +127,7 @@ public class GameState {
         // Unregister the objectives
         flagsCaptured.unregister();
         flagsRecovered.unregister();
-        playerHasClass.unregister();
+        playerClasses.unregister();
     }
 
     /**
@@ -126,6 +136,12 @@ public class GameState {
     public void start() {
         // Do nothing if the game is already running
         if (running) {
+            return;
+        }
+
+        // Can't start if the bases aren't set
+        if (!isRedBaseLocationSet || !isBlueBaseLocationSet) {
+            Bukkit.broadcastMessage(ChatColor.GOLD + "[CTF] " + ChatColor.RED + "The bases must be set before the game can be started.");
             return;
         }
 
@@ -143,6 +159,32 @@ public class GameState {
         // Put a colored banner at the flag locations
         redFlagLocation.getBlock().setType(Material.RED_BANNER);
         blueFlagLocation.getBlock().setType(Material.BLUE_BANNER);
+
+        // Set the scores for all online players to 0
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            flagsCaptured.getScore(player.getName()).setScore(0);
+            flagsRecovered.getScore(player.getName()).setScore(0);
+            playerClasses.getScore(player.getName()).setScore(PlayerClass.NONE.getId());
+        }
+
+        // Set the team scores for flags captured and flags recovered
+        for (PlayerTeam team : PlayerTeam.values()) {
+            flagsCaptured.getScore(team.getName() + "Team").setScore(0);
+            flagsRecovered.getScore(team.getName() + "Team").setScore(0);
+        }
+
+        redFlagHolder = null;
+        blueFlagHolder = null;
+
+        // Set the state booleans
+        isRedFlagStolen = false;
+        isBlueFlagStolen = false;
+        isRedFlagAtBase = true;
+        isBlueFlagAtBase = true;
+
+        // Start the tick events
+        flagTick = new FlagStateTick(this);
+        flagTick.runTaskTimer(plugin, 0, 1);
 
         // Mark the game as running
         running = true;
@@ -182,91 +224,270 @@ public class GameState {
         start();
     }
 
-    /**
-     * Executes a single game tick.
-     */
-    public void tick() {
-        // Do nothing if the game is not running
-        if (!running) {
-            return;
-        }
+    public void stealRedFlag(Player player) {
+        redFlagLocation.getBlock().setType(Material.AIR);
+        player.getInventory().setHelmet(new ItemStack(Material.RED_BANNER));
 
-        // TODO: game logic here
+        isRedFlagStolen = true;
+        isRedFlagAtBase = false;
+
+        redFlagHolder = player;
     }
 
 
-    /**
-     * Has a player join a class only if they haven't already joined one
-     * @param player The player to have join the class
-     * @param className The class to join
-     * @return True if the player joined the class, false otherwise
-     */
-    public void joinClass(Player player, String className) {
-        // Do nothing if the game is not running
-        if (!running) {
-            player.sendMessage(ChatColor.GOLD + "[CTF] " + ChatColor.RED + "The game is not running!");
-            return;
+    public void stealBlueFlag(Player player) {
+        blueFlagLocation.getBlock().setType(Material.AIR);
+        player.getInventory().setHelmet(new ItemStack(Material.BLUE_BANNER));
+
+        isBlueFlagStolen = true;
+        isBlueFlagAtBase = false;
+
+        blueFlagHolder = player;
+    }
+
+
+    public void dropRedFlag(Player player) {
+        // Only drop the flag if the player is the holder
+        if (playerHasRedFlag(player)) {
+            redFlagLocation = player.getLocation();
+            redFlagLocation.getBlock().setType(Material.RED_BANNER);
+            player.getInventory().setHelmet(new ItemStack(Material.AIR));
+            isRedFlagStolen = false;
+            redFlagHolder = null;
+        }
+    }
+
+
+    public void dropBlueFlag(Player player) {
+        // Only drop the flag if the player is the holder
+        if (playerHasBlueFlag(player)) {
+            blueFlagLocation = player.getLocation();
+            blueFlagLocation.getBlock().setType(Material.BLUE_BANNER);
+            player.getInventory().setHelmet(new ItemStack(Material.AIR));
+            isBlueFlagStolen = false;
+            blueFlagHolder = null;
+        }
+    }
+
+
+    public void returnRedFlag() {
+        // If the flag isn't captured, it's sitting somewhere. Set that block to air
+        if (!isRedFlagStolen) {
+            redFlagLocation.getBlock().setType(Material.AIR);
         }
 
-        // Check that the player has joined either the red or blue team
-        if (!(redTeam.getEntries().contains(player.getName()) || blueTeam.getEntries().contains(player.getName()))) {
-            player.sendMessage(ChatColor.GOLD + "[CTF] " + ChatColor.RED + "You must be on a team to join a class!");
-            return;
+        // If the flag is on someone's head, remove it
+        if (redFlagHolder != null) {
+            redFlagHolder.getInventory().setHelmet(new ItemStack(Material.AIR));
         }
 
-        // Check if the player has already joined a class
-        try {
-            if (playerHasClass.getScore(player.getName()).getScore() > 0) {
-                player.sendMessage(ChatColor.GOLD + "[CTF] " + ChatColor.RED + "You have already joined a class!");
-                return;
-            }
-        } catch (IllegalArgumentException e) {
-            // Do nothing, just continue on
+        // Set the flag to the base
+        redFlagLocation = redBaseLocation.clone();
+        redFlagLocation.setY(redFlagLocation.getY() + 1);
+        redFlagLocation.getBlock().setType(Material.RED_BANNER);
+
+        isRedFlagAtBase = true;
+        isRedFlagStolen = false;
+        redFlagHolder = null;
+    }
+
+
+    public void returnRedFlag(Player player) {
+        returnRedFlag();
+        Score playeScore = flagsRecovered.getScore(player.getName());
+        Score teamScore = flagsRecovered.getScore(getPlayerTeam(player).getName() + " team");
+        playeScore.setScore(playeScore.getScore() + 1);
+        teamScore.setScore(teamScore.getScore() + 1);
+    }
+
+
+    public void returnBlueFlag() {
+        // If the flag isn't captured, it's sitting somewhere. Set that block to air
+        if (!isBlueFlagStolen) {
+            blueFlagLocation.getBlock().setType(Material.AIR);
         }
 
-        // get the player's class based on the class name
-        PlayerClass playerClass = PlayerClass.getByName(className);
-
-        playerHasClass.getScore(player.getName()).setScore(playerClass.getId());
-
-        // Prepare the player inventory to have the necessary items added
-        PlayerInventory playerInventory = player.getInventory();
-        playerInventory.clear();
-
-
-        // If this was not a valid class, then return
-        if (playerClass == PlayerClass.NONE) {
-            player.sendMessage(ChatColor.GOLD + "[CTF] " + ChatColor.RED + "Invalid class name!");
-            return;
+        // If the flag is on someone's head, remove it
+        if (blueFlagHolder != null) {
+            blueFlagHolder.getInventory().setHelmet(new ItemStack(Material.AIR));
         }
 
-        // Add the class items to the player's inventory
-        playerInventory.setContents(Loadouts.getInventory(playerClass));
+        // Set the flag to the base
+        blueFlagLocation = blueBaseLocation.clone();
+        blueFlagLocation.setY(blueFlagLocation.getY() + 1);
+        blueFlagLocation.getBlock().setType(Material.BLUE_BANNER);
 
-        // Give the player the class's armor
-        player.getInventory().setArmorContents(Loadouts.getArmor(playerClass));
+        isBlueFlagAtBase = true;
+        isBlueFlagStolen = false;
+        blueFlagHolder = null;
+    }
 
-        // Set the chestplate color based on the player's team
-        ItemStack chestplate = playerInventory.getChestplate();
-        LeatherArmorMeta meta = (LeatherArmorMeta)chestplate.getItemMeta();
 
+    public void returnBlueFlag(Player player) {
+        returnBlueFlag();
+
+        // Increase the scores
+        Score playeScore = flagsRecovered.getScore(player.getName());
+        Score teamScore = flagsRecovered.getScore(getPlayerTeam(player).getName() + " team");
+        playeScore.setScore(playeScore.getScore() + 1);
+        teamScore.setScore(teamScore.getScore() + 1);
+    }
+
+
+    public void captureRedFlag(Player player) {
+        // Only capture the flag if the player is the holder
+        if (player == redFlagHolder) {
+            player.getInventory().setHelmet(new ItemStack(Material.AIR));
+            isRedFlagStolen = false;
+            isRedFlagAtBase = true;
+            redFlagHolder = null;
+
+            // Move the flag to the base
+            redFlagLocation = redBaseLocation.clone();
+            redFlagLocation.setY(redFlagLocation.getY() + 1);
+            redFlagLocation.getBlock().setType(Material.RED_BANNER);
+
+            // Increase the scores
+            Score playeScore = flagsCaptured.getScore(player.getName());
+            Score teamScore = flagsCaptured.getScore(getPlayerTeam(player).getName() + " team");
+            playeScore.setScore(playeScore.getScore() + 1);
+            teamScore.setScore(teamScore.getScore() + 1);
+        }
+    }
+
+
+    public void captureBlueFlag(Player player) {
+        // Only capture the flag if the player is the holder
+        if (player == blueFlagHolder) {
+            player.getInventory().setHelmet(new ItemStack(Material.AIR));
+            isBlueFlagStolen = false;
+            isBlueFlagAtBase = true;
+            blueFlagHolder = null;
+
+            // Move the flag to the base
+            blueFlagLocation = blueBaseLocation.clone();
+            blueFlagLocation.setY(blueFlagLocation.getY() + 1);
+            blueFlagLocation.getBlock().setType(Material.BLUE_BANNER);
+
+            // Increase the scores
+            Score playeScore = flagsCaptured.getScore(player.getName());
+            Score teamScore = flagsCaptured.getScore(getPlayerTeam(player).getName() + " team");
+            playeScore.setScore(playeScore.getScore() + 1);
+            teamScore.setScore(teamScore.getScore() + 1);
+        }
+    }
+
+
+    public boolean playerHasRedFlag(Player player) {
+        return (player == redFlagHolder);
+    }
+
+
+    public boolean playerHasBlueFlag(Player player) {
+        return (player == blueFlagHolder);
+    }
+
+
+    public boolean isRedFlagAtBase() {
+        return isRedFlagAtBase;
+    }
+
+    
+    public boolean isBlueFlagAtBase() {
+        return isBlueFlagAtBase;
+    }
+
+
+    public boolean isRedFlagStolen() {
+        return isRedFlagStolen;
+    }
+
+
+    public boolean isBlueFlagStolen() {
+        return isBlueFlagStolen;
+    }
+
+
+    public boolean isRedFlagDropped() {
+        return (!isRedFlagAtBase && !isRedFlagStolen);
+    }
+
+
+    public boolean isBlueFlagDropped() {
+        return (!isBlueFlagAtBase && !isBlueFlagStolen);
+    }
+
+
+    public PlayerClass getPlayerClass(Player player) {
+        return PlayerClass.getById(playerClasses.getScore(player.getName()).getScore());
+    }
+
+
+    public void setPlayerClass(Player player, PlayerClass playerClass) {
+        playerClasses.getScore(player.getName()).setScore(playerClass.getId());
+    }
+
+
+    public PlayerTeam getPlayerTeam(Player player) {
         if (redTeam.getEntries().contains(player.getName())) {
-            meta.setColor(Color.RED);
+            return PlayerTeam.RED;
+        } else if (blueTeam.getEntries().contains(player.getName())) {
+            return PlayerTeam.BLUE;
+        } else {
+            return PlayerTeam.NONE;
         }
-
-        if (blueTeam.getEntries().contains(player.getName())) {
-            meta.setColor(Color.BLUE);
-        }
-
-        chestplate.setItemMeta(meta);
-        playerInventory.setChestplate(chestplate);
-
-
-        player.sendMessage(ChatColor.GOLD + "[CTF] " + ChatColor.GREEN + "You have joined the " + ChatColor.GOLD + className + ChatColor.GREEN + " class!");
-
-        return;
     }
 
+
+    public void setPlayerTeam(Player player, PlayerTeam playerTeam) {
+        if (playerTeam == PlayerTeam.RED) {
+            redTeam.addEntry(player.getName());
+            blueTeam.removeEntry(player.getName());
+        }
+
+        if (playerTeam == PlayerTeam.BLUE) {
+            blueTeam.addEntry(player.getName());
+            redTeam.removeEntry(player.getName());
+        }
+
+        if (playerTeam == PlayerTeam.NONE) {
+            redTeam.removeEntry(player.getName());
+            blueTeam.removeEntry(player.getName());
+        }
+    }
+
+
+    public int getFlagsCaptured(Player player) {
+        return flagsCaptured.getScore(player.getName()).getScore();
+    }
+
+
+    public int getFlagsCaptured(PlayerTeam team) {
+        return flagsCaptured.getScore(team.getName() + " team").getScore();
+    }
+
+    
+    public int getFlagsRecovered(Player player) {
+        return flagsRecovered.getScore(player.getName()).getScore();
+    }
+
+
+    public int getFlagsRecovered(PlayerTeam team) {
+        return flagsRecovered.getScore(team.getName() + " team").getScore();
+    }
+
+
+    public void showScore() {
+        showScore(ChatColor.GOLD + "SCORE");
+    }
+
+
+    public void showScore(String customTitle) {
+        // Display big title pop up with the scores
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            player.sendTitle(customTitle, ChatColor.RED + "" + getFlagsCaptured(PlayerTeam.RED) + "" + ChatColor.WHITE + " - " + ChatColor.BLUE + "" + getFlagsCaptured(PlayerTeam.BLUE), 10, 80, 20);
+        }
+    }
 
 
     // ########################################################
@@ -290,6 +511,7 @@ public class GameState {
      */
     public void setRedBaseLocation(Location redBaseLocation) {
         this.redBaseLocation = redBaseLocation;
+        isRedBaseLocationSet = true;
     }
 
 
@@ -300,7 +522,7 @@ public class GameState {
      * @param z The z coordinate of the red team's base
      */
     public void setRedBaseLocation(double x, double y, double z) {
-        this.redBaseLocation = new Location(plugin.getServer().getWorlds().get(0), x, y, z);
+        setRedBaseLocation(new Location(plugin.getServer().getWorlds().get(0), x, y, z));
     }
 
 
@@ -319,6 +541,7 @@ public class GameState {
      */
     public void setBlueBaseLocation(Location blueBaseLocation) {
         this.blueBaseLocation = blueBaseLocation;
+        isBlueBaseLocationSet = true;
     }
 
 
@@ -329,7 +552,7 @@ public class GameState {
      * @param z The z coordinate of the blue team's base
      */
     public void setBlueBaseLocation(double x, double y, double z) {
-        this.blueBaseLocation = new Location(plugin.getServer().getWorlds().get(0), x, y, z);
+        setBlueBaseLocation(new Location(plugin.getServer().getWorlds().get(0), x, y, z));
     }
 
 
@@ -433,6 +656,15 @@ public class GameState {
      */
     public Objective getFlagsRecovered() {
         return flagsRecovered;
+    }
+
+
+    /**
+     * Gets the objective tracking the player's classes
+     * @return The objective tracking the player's classes
+     */
+    public Objective getPlayerClasses() {
+        return playerClasses;
     }
 
 

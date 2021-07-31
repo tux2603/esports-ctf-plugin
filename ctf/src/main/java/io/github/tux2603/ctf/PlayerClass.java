@@ -7,6 +7,7 @@ public enum PlayerClass {
     NORMAL("normal", 4),
     SCOUT("scout", 5),
     TANK("tank", 6),
+    DEAD("dead", -1),
     NONE("none", 0);
 
     private final String name;
@@ -46,5 +47,9 @@ public enum PlayerClass {
     @Override
     public String toString() {
         return name;
+    }
+
+    public boolean canStealFlag() {
+        return (this != DEAD && this != TANK && this != ASSASSIN);
     }
 }

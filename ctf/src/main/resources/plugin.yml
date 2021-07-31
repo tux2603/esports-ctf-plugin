@@ -7,11 +7,11 @@ commands:
   setRedBase:
     description: Sets the location of the red team's base. If no location is specified, the player's location is used
     usage: setRedBase [location]
-    permission: ctf.admin
+    permission: ctf.captain.red
   setBlueBase:
     description: Sets the location of the blue team's base. If no location is specified, the player's location is used
     usage: setBlueBase [location]
-    permission: ctf.admin
+    permission: ctf.captain.blue
   startGame:
     description: Starts the game
     usage: startGame
@@ -35,3 +35,9 @@ permission:
   ctf.player:
     description: Allows the player to use player commands
     default: true
+  ctf.captain.red:
+    description: Allows the player to use commands for red team specific tasks
+    default: op
+  ctf.captain.blue:
+    description: Allows the player to use commands for blue team specific tasks
+    default: op

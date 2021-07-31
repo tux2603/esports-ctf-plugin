@@ -1,6 +1,7 @@
 package io.github.tux2603.ctf;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import org.bukkit.ChatColor;
 import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
@@ -16,7 +17,7 @@ final public class Loadouts {
     public static ItemStack[] getInventory(PlayerClass playerClass) {
         ItemStack[] inventory = new ItemStack[9];
 
-        // Make some item stacks that are shared between mulitple classes
+        // Make some item stacks that are shared between multiple classes
         // Stack of 64 golden carrots
         ItemStack goldenCarrots = new ItemStack(Material.GOLDEN_CARROT, 64);
 
@@ -188,8 +189,7 @@ final public class Loadouts {
             inventory[4] = new ItemStack(Material.ENDER_PEARL, 1);
 
             // Give the player 16 slowness 3 arrows
-            ItemStack slownessArrows = new ItemStack(Material.ARROW, 16);
-            slownessArrows.addEnchantment(Enchantment.KNOCKBACK, 1);
+            ItemStack slownessArrows = new ItemStack(Material.TIPPED_ARROW, 16);
             PotionMeta slownessArrowsMeta = (PotionMeta)slownessArrows.getItemMeta();
             slownessArrowsMeta.setDisplayName(ChatColor.BLUE + "Slowness Arrows");
             slownessArrowsMeta.addCustomEffect(new PotionEffect(PotionEffectType.SLOW, 1200, 3, true, false), true);
@@ -205,8 +205,8 @@ final public class Loadouts {
 
             // give the player a knock back, sharp stick
             ItemStack knockBack = new ItemStack(Material.STICK, 1);
-            knockBack.addEnchantment(Enchantment.DAMAGE_ALL, 1);
-            knockBack.addEnchantment(Enchantment.KNOCKBACK, 1);
+            knockBack.addUnsafeEnchantment(Enchantment.DAMAGE_ALL, 1);
+            knockBack.addUnsafeEnchantment(Enchantment.KNOCKBACK, 1);
             inventory[1] = knockBack;
 
             // give the player an ender pearl
@@ -250,7 +250,7 @@ final public class Loadouts {
 
             break;
 
-        case NONE:
+        case NONE: case DEAD:
             // give the player nothing
             break;
         }
@@ -263,7 +263,7 @@ final public class Loadouts {
         // create an array to hold the armor
         // index 0 is boots
         // index 1 is leggings
-        // index 2 is chestplate
+        // index 2 is chest plate
         // index 3 is the helmet
         ItemStack[] armor = new ItemStack[4];
 
@@ -325,10 +325,51 @@ final public class Loadouts {
             diamondBoots.addUnsafeEnchantment(Enchantment.DURABILITY, 1000);
             armor[0] = diamondBoots;
             break;
-        case NONE:
+        case NONE: case DEAD:
             // give the player nothing
             break;
         }
         return armor;
+    }
+
+    public static float getSpeed(PlayerClass playerClass) {
+        switch (playerClass) {
+        case NONE:
+        case DEAD:
+            return 0;
+        case TANK:
+            return 0.05f;
+        case ASSASSIN:
+        case MEDIC:
+            return 0.18f;
+        case NORMAL:
+        case MAGE:
+            return 0.2f;
+        case SCOUT:
+            return 0.3f;
+        default:
+            return 0;
+        }
+    }
+
+    public static Collection<PotionEffect> getPotionEffects(PlayerClass playerClass) {
+        Collection<PotionEffect> potionEffects = new ArrayList<>();
+        switch (playerClass) {
+        case TANK:
+            potionEffects.add(new PotionEffect(PotionEffectType.JUMP, Integer.MAX_VALUE, 127, false, false));
+            break;
+        case MEDIC:
+            potionEffects.add(new PotionEffect(PotionEffectType.JUMP, Integer.MAX_VALUE, 7, false, false));
+            potionEffects.add(new PotionEffect(PotionEffectType.WEAKNESS, Integer.MAX_VALUE, 1, false, false));
+            break;
+        case MAGE:
+            potionEffects.add(new PotionEffect(PotionEffectType.WEAKNESS, Integer.MAX_VALUE, 1, false, false));
+            potionEffects.add(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, Integer.MAX_VALUE, 1, false, false));
+            break;
+        default:
+            break;
+        }
+
+        return potionEffects;
     }
 }

@@ -114,6 +114,7 @@ public class GameState {
 
         plugin.getServer().getPluginManager().registerEvents(new PlayerRespawnListener(this), plugin);
         plugin.getServer().getPluginManager().registerEvents(new PlayerDeathListener(this), plugin);
+        plugin.getServer().getPluginManager().registerEvents(new ProjectileEventListener(this), plugin);
     }
 
 

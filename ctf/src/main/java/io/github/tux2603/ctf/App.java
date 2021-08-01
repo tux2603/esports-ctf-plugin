@@ -1,6 +1,7 @@
 package io.github.tux2603.ctf;
 
 import org.bukkit.Bukkit;
+import org.bukkit.GameRule;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class App extends JavaPlugin {
@@ -20,6 +21,9 @@ public class App extends JavaPlugin {
         this.getCommand("stopGame").setExecutor(commandHandler);
         this.getCommand("restartGame").setExecutor(commandHandler);
         this.getCommand("class").setExecutor(commandHandler);
+
+        // Players will keep inventory on death
+        Bukkit.getWorlds().get(0).setGameRule(GameRule.KEEP_INVENTORY, true);
 
         Bukkit.broadcastMessage("Capture the flag has been initialized!");
     }

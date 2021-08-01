@@ -1,14 +1,7 @@
-# ESports Spigot Plugins
+# ESports Capture the Flag Plugins
 
-Spigot Plugins!
+Spigot CTF!
 
 ## Building
 
-To build any of the plugins, run
-
-```bash
-cd <plugin name>
-mvn install -f pom.xml
-```
-
-This will generate a jar file for the plugin at `<plugin name>/target/<plugin name>-<version>.jar`
+To build any of the plugins, run `mvn install -f pom.xml`. This will generate a jar file for the plugin at `target/<plugin name>-<version>.jar`

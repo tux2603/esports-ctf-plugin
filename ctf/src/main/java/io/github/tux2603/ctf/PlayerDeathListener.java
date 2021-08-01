@@ -19,11 +19,19 @@ public class PlayerDeathListener implements Listener {
         if(gameState.playerHasBlueFlag(event.getEntity())) {
             gameState.dropBlueFlag(event.getEntity());
             Bukkit.broadcastMessage(gameState.getPlayerTeam(event.getEntity()).getColor() + event.getEntity().getName() + ChatColor.WHITE + " has dropped the blue flag!");
+
+            // Start a timer to return the flag after 600 ticks
+            BlueFlagReturnRunnable blueFlagReturnRunnable = new BlueFlagReturnRunnable(gameState);
+            blueFlagReturnRunnable.runTaskLater(gameState.getPlugin(), 600);
         }
 
         if(gameState.playerHasRedFlag(event.getEntity())) {
             gameState.dropRedFlag(event.getEntity());
             Bukkit.broadcastMessage(gameState.getPlayerTeam(event.getEntity()).getColor() + event.getEntity().getName() + ChatColor.WHITE + " has dropped the red flag!");
+
+            // Start a timer to return the flag after 600 ticks
+            RedFlagReturnRunnable redFlagReturnRunnable = new RedFlagReturnRunnable(gameState);
+            redFlagReturnRunnable.runTaskLater(gameState.getPlugin(), 600);
         }
 
         gameState.setPlayerClass(event.getEntity(), PlayerClass.DEAD);

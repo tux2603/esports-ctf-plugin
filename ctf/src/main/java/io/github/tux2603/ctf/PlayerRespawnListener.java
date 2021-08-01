@@ -60,8 +60,12 @@ public class PlayerRespawnListener implements Listener{
         mageLink.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/class mage"));
         event.getPlayer().spigot().sendMessage(mageLink);
 
-        event.getPlayer().setGravity(false); 
-        Location wayUp = event.getRespawnLocation().add(0, 10000, 0);
-        event.setRespawnLocation(wayUp);
+        if(gameState.getPlayerTeam(event.getPlayer()) == PlayerTeam.RED) {
+            event.setRespawnLocation(gameState.getRedSpawnLocation());
+        }
+
+        if(gameState.getPlayerTeam(event.getPlayer()) == PlayerTeam.BLUE) {
+            event.setRespawnLocation(gameState.getBlueSpawnLocation());
+        }
     }
 }

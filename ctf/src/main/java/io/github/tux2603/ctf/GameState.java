@@ -21,6 +21,8 @@ public class GameState {
     private Location blueBaseLocation;
     private Location redFlagLocation;
     private Location blueFlagLocation;
+    private Location redSpawnLocation;
+    private Location blueSpawnLocation;
 
     private Scoreboard scoreboard;
 
@@ -38,6 +40,8 @@ public class GameState {
     private boolean running = false;
     private boolean isRedBaseLocationSet = false;
     private boolean isBlueBaseLocationSet = false;
+    private boolean isRedSpawnLocationSet = false;
+    private boolean isBlueSpawnLocationSet = false;
 
     private Player redFlagHolder = null;
     private Player blueFlagHolder = null;
@@ -142,6 +146,11 @@ public class GameState {
         // Can't start if the bases aren't set
         if (!isRedBaseLocationSet || !isBlueBaseLocationSet) {
             Bukkit.broadcastMessage(ChatColor.GOLD + "[CTF] " + ChatColor.RED + "The bases must be set before the game can be started.");
+            return;
+        }
+
+        if (!isRedSpawnLocationSet || !isBlueSpawnLocationSet) {
+            Bukkit.broadcastMessage(ChatColor.GOLD + "[CTF] " + ChatColor.RED + "The spawn points must be set before the game can be started.");
             return;
         }
 
@@ -611,6 +620,38 @@ public class GameState {
      */
     public void setBlueFlagLocation(double x, double y, double z) {
         this.blueFlagLocation = new Location(plugin.getServer().getWorlds().get(0), x, y, z);
+    }
+
+    
+    public Location getRedSpawnLocation() {
+        return redSpawnLocation;
+    }
+
+    
+    public void setRedSpawnLocation(Location redSpawnLocation) {
+        isRedSpawnLocationSet = true;
+        this.redSpawnLocation = redSpawnLocation;
+    }
+
+
+    public void setRedSpawnLocation(double x, double y, double z) {
+        setRedSpawnLocation(new Location(plugin.getServer().getWorlds().get(0), x, y, z));
+    }
+
+
+    public Location getBlueSpawnLocation() {
+        return blueSpawnLocation;
+    }
+
+
+    public void setBlueSpawnLocation(Location blueSpawnLocation) {
+        isBlueSpawnLocationSet = true;
+        this.blueSpawnLocation = blueSpawnLocation;
+    }
+
+
+    public void setBlueSpawnLocation(double x, double y, double z) {
+        setBlueSpawnLocation(new Location(plugin.getServer().getWorlds().get(0), x, y, z));
     }
 
 

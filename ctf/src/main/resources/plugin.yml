@@ -12,6 +12,14 @@ commands:
     description: Sets the location of the blue team's base. If no location is specified, the player's location is used
     usage: setBlueBase [location]
     permission: ctf.captain.blue
+  setRedSpawn:
+    description: Sets the location of the red team's spawn. If no location is specified, the player's location is used
+    usage: setRedSpawn [location]
+    permission: ctf.captain.red
+  setBlueSpawn:
+    description: Sets the location of the blue team's spawn. If no location is specified, the player's location is used
+    usage: setBlueSpawn [location]
+    permission: ctf.captain.blue
   startGame:
     description: Starts the game
     usage: startGame

@@ -14,6 +14,8 @@ public class App extends JavaPlugin {
         CTFCommands commandHandler = new CTFCommands(gameState);
         this.getCommand("setBlueBase").setExecutor(commandHandler);
         this.getCommand("setRedBase").setExecutor(commandHandler);
+        this.getCommand("setRedSpawn").setExecutor(commandHandler);
+        this.getCommand("setBlueSpawn").setExecutor(commandHandler);
         this.getCommand("startGame").setExecutor(commandHandler);
         this.getCommand("stopGame").setExecutor(commandHandler);
         this.getCommand("restartGame").setExecutor(commandHandler);

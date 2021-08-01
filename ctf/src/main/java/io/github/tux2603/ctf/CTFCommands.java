@@ -23,6 +23,10 @@ public class CTFCommands implements CommandExecutor {
             return setRedBaseLocation(sender, args);
         case "setbluebase":
             return setBlueBaseLocation(sender, args);
+        case "setredspawn":
+            return setRedSpawnLocation(sender, args);
+        case "setbluespawn":
+            return setBlueSpawnLocation(sender, args);
         case "startgame":
             return start(sender);
         case "stopgame":
@@ -78,6 +82,52 @@ public class CTFCommands implements CommandExecutor {
             Location location = ((Player)sender).getLocation();
             gameState.setBlueBaseLocation(location);
             sender.sendMessage("Blue base location set to " + location.getX() + ", " + location.getY() + ", " + location.getZ());
+            return true;
+        }
+
+        return false;
+    }
+
+    private boolean setRedSpawnLocation(CommandSender sender, String[] args) {
+        // Parse the first three arguments as a location and save it to the game state
+        if (args.length >= 3) {
+            double x = Double.parseDouble(args[0]);
+            double y = Double.parseDouble(args[1]);
+            double z = Double.parseDouble(args[2]);
+
+            gameState.setRedSpawnLocation(x, y, z);
+            sender.sendMessage("Red spawn location set to " + x + ", " + y + ", " + z);
+            return true;
+        }
+
+        // If no location was specified, use the players's location
+        if (args.length == 0 && sender instanceof Player) {
+            Location location = ((Player)sender).getLocation();
+            gameState.setRedSpawnLocation(location);
+            sender.sendMessage("Red spawn location set to " + location.getX() + ", " + location.getY() + ", " + location.getZ());
+            return true;
+        }
+
+        return false;
+    }
+
+    private boolean setBlueSpawnLocation(CommandSender sender, String[] args) {
+        // Parse the first three arguments as a location and save it to the game state
+        if (args.length >= 3) {
+            double x = Double.parseDouble(args[0]);
+            double y = Double.parseDouble(args[1]);
+            double z = Double.parseDouble(args[2]);
+
+            gameState.setBlueSpawnLocation(x, y, z);
+            sender.sendMessage("Blue spawn location set to " + x + ", " + y + ", " + z);
+            return true;
+        }
+
+        // If no location was specified, use the players's location
+        if (args.length == 0 && sender instanceof Player) {
+            Location location = ((Player)sender).getLocation();
+            gameState.setBlueSpawnLocation(location);
+            sender.sendMessage("Blue spawn location set to " + location.getX() + ", " + location.getY() + ", " + location.getZ());
             return true;
         }
 
@@ -148,9 +198,7 @@ public class CTFCommands implements CommandExecutor {
                 chestplateMeta.setColor(Color.BLUE);
             }
 
-            player.setGravity(true);
-            player.setWalkSpeed(Loadouts.getSpeed(playerClass));
-            player.addPotionEffects(Loadouts.getPotionEffects(playerClass));
+            player.getInventory().getChestplate().setItemMeta(chestplateMeta);
 
             // Teleport the player to the base
             if (gameState.getPlayerTeam(player) == PlayerTeam.RED) {
@@ -161,6 +209,9 @@ public class CTFCommands implements CommandExecutor {
                 player.teleport(gameState.getBlueBaseLocation());
             }
 
+            player.setWalkSpeed(Loadouts.getSpeed(playerClass));
+            player.addPotionEffects(Loadouts.getPotionEffects(playerClass));
+
             // Send a message to the player
             player.sendMessage(ChatColor.GREEN + "You have joined the " + playerClass.getName() + " class!");
 
@@ -169,5 +220,4 @@ public class CTFCommands implements CommandExecutor {
 
         return false;
     }
-
 }
